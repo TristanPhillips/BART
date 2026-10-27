@@ -115,7 +115,7 @@
       Auto-pump to <input type="number" id="autoN" min="1" value="3"> then collect
       <button id="autoGo">Go</button>
     </div>
-    <div class="hint">Keyboard: <b>Space</b> = pump / next balloon &nbsp;·&nbsp; <b>Enter</b> = collect</div>
+    <div class="hint">Keyboard: <b>Space</b> = pump &nbsp;·&nbsp; <b>Enter</b> = collect</div>
   </section>
 
   <aside class="card">
@@ -187,7 +187,8 @@ const COLORS = ['#e63946','#2f6fde','#f4a261','#2a9d8f','#9b5de5','#f15bb5','#00
 const ROUND_COLORS = ['#e08a00','#1f9d55','#9b5de5','#2f6fde','#d64545','#00a6d6','#7a5c2e','#f15bb5'];
 const roundColor = r => ROUND_COLORS[(r - 1) % ROUND_COLORS.length];
 
-let rng, seq = [], round = 1, idx = 0, pumps = 0, phase = 'play', lockUntil = 0, autoTimer = null;
+let rng, seq = [], round = 1, idx = 0, pumps = 0, phase = 'play', autoTimer = null, advanceTimer = null;
+const ADVANCE_MS = 1300;      // pause on the POP!/Banked message before the next balloon appears
 let rounds = [[]];            // rounds[r-1] = list of balloon results for round r (kept until Reset)
 let showAnalysis = false;
 
@@ -219,8 +220,7 @@ function finish(popped){
   stopAuto();
   res(round).push({pumps, popped, earned: popped ? 0 : S.v * pumps, popAt: popAt()});
   phase = 'outcome';
-  lockUntil = Date.now() + 700;
-  setTimeout(render, 720);
+  advanceTimer = setTimeout(() => { advanceTimer = null; next(); }, ADVANCE_MS);
   const m = $('msg');
   if (popped){
     $('balloon').classList.add('gone');
@@ -237,7 +237,6 @@ function finish(popped){
 function primary(){
   if (autoTimer) return;
   if (phase === 'play') pump();
-  else if (phase === 'outcome' && Date.now() >= lockUntil) next();
 }
 function next(){
   if (idx < S.B - 1){ idx++; newBalloon(); }
@@ -266,8 +265,9 @@ function startAuto(){
 }
 function stopAuto(){ if (autoTimer){ clearInterval(autoTimer); autoTimer = null; } }
 
+function stopAdvance(){ if (advanceTimer){ clearTimeout(advanceTimer); advanceTimer = null; } }
 function resetAll(){
-  stopAuto();
+  stopAuto(); stopAdvance();
   rng = mulberry32(S.seed); seq = [];
   round = 1; idx = 0; rounds = [[]]; showAnalysis = false;
   $('summary').hidden = true;
@@ -301,8 +301,8 @@ function render(){
   const pb = $('primaryBtn'), cb = $('collectBtn');
   if (live){ pb.textContent = 'Pump'; pb.disabled = !!autoTimer; }
   else if (phase === 'outcome'){
-    pb.textContent = idx < S.B - 1 ? 'Next balloon →' : 'See results';
-    pb.disabled = Date.now() < lockUntil;
+    pb.textContent = idx < S.B - 1 ? 'Next balloon…' : 'Results…';
+    pb.disabled = true;
   } else { pb.textContent = 'Round over'; pb.disabled = true; }
   cb.textContent = live ? `Collect ${money(S.v * pumps)}` : 'Collect $';
   cb.disabled = !live || !!autoTimer;
