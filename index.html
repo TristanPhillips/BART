@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#f6f4ef; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b72; --line:#e2ded4;
-    --accent:#2f6fde; --good:#1f9d55; --bad:#d64545; --r1:#e08a00; --r2:#1f9d55;
+    --accent:#2f6fde; --good:#1f9d55; --bad:#d64545;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -47,17 +47,20 @@
   #auto{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px;font-size:16px}
   #auto input{width:70px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px}
   h2{font-size:18px;margin:0 0 10px}
+  h3{font-size:16px;margin:18px 0 8px}
   .dots{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
   .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);background:#fff}
   .dot.cur{border-color:var(--accent);box-shadow:0 0 0 3px #d6e2fa}
   .dot.cash{background:var(--good);border-color:var(--good)}
   .dot.pop{background:var(--bad);border-color:var(--bad)}
-  .tablewrap{max-height:420px;overflow:auto}
+  .tablewrap{max-height:360px;overflow:auto}
   table{border-collapse:collapse;width:100%;font-size:16px;font-variant-numeric:tabular-nums}
   th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
   th:first-child,td:first-child{text-align:left}
   th{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
   td.pop{color:var(--bad);font-weight:700} td.cash{color:var(--good);font-weight:700}
+  tr.curRow td{background:#f1f5fd}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:baseline}
   #summary{grid-column:1/-1}
   .stats{display:flex;gap:30px;flex-wrap:wrap;margin:6px 0 14px}
   .stats .v{font-size:30px;font-weight:800}
@@ -78,14 +81,14 @@
   <h1>🎈 Balloon Analog Risk Task</h1>
   <span class="pill" id="roundPill">Round 1</span>
   <span class="bank" id="bank">$0</span>
-  <button id="resetBtn" title="Start over with new balloons">Reset</button>
+  <button id="resetBtn" title="Erase all rounds and start over with new balloons">Reset</button>
   <button id="settingsBtn">Settings</button>
 </header>
 
 <main>
   <section class="card" id="stage">
     <svg viewBox="0 0 400 430" aria-label="balloon">
-      <path id="string" d="M200 336 C 185 360, 215 385, 200 428" stroke="#999" stroke-width="2" fill="none"/>
+      <path d="M200 336 C 185 360, 215 385, 200 428" stroke="#999" stroke-width="2" fill="none"/>
       <g id="balloon">
         <ellipse id="bodyShape" cx="200" cy="180" rx="128" ry="148" fill="#e63946"/>
         <ellipse cx="155" cy="115" rx="26" ry="42" fill="#fff" opacity=".28" transform="rotate(-25 155 115)"/>
@@ -98,7 +101,7 @@
       </g>
     </svg>
     <div class="readouts">
-      <div><div class="k">Balloon</div><div class="v" id="balNum">1 / 10</div></div>
+      <div><div class="k">Balloon</div><div class="v" id="balNum">1 / 15</div></div>
       <div><div class="k">Pumps</div><div class="v" id="pumpCount">0</div></div>
       <div><div class="k">On this balloon</div><div class="v" id="current">$0</div></div>
     </div>
@@ -109,7 +112,7 @@
       <button class="big collect" id="collectBtn">Collect $</button>
     </div>
     <div id="auto" hidden>
-      Auto-pump to <input type="number" id="autoN" min="1" value="5"> then collect
+      Auto-pump to <input type="number" id="autoN" min="1" value="3"> then collect
       <button id="autoGo">Go</button>
     </div>
     <div class="hint">Keyboard: <b>Space</b> = pump / next balloon &nbsp;·&nbsp; <b>Enter</b> = collect</div>
@@ -124,6 +127,13 @@
         <tbody id="hist"></tbody>
       </table>
     </div>
+    <div id="allWrap" hidden>
+      <h3>All rounds</h3>
+      <table>
+        <thead><tr><th>Round</th><th>Collected</th><th>Total</th><th>Avg / balloon</th></tr></thead>
+        <tbody id="allRounds"></tbody>
+      </table>
+    </div>
   </aside>
 
   <section class="card" id="summary" hidden></section>
@@ -131,16 +141,15 @@
 
 <dialog id="settings">
   <h2>Settings</h2>
-  <p class="note">Changing settings restarts from Round 1. You can also set these with URL parameters, e.g.
-    <code>?N=10&amp;v=10&amp;b1=10&amp;b2=10</code></p>
+  <p class="note">Changing settings erases all rounds. You can also set these with URL parameters, e.g.
+    <code>?N=6&amp;v=10&amp;b=15</code></p>
   <label>Max pumps N (pop chance on pump k+1 is 1/(N−k)) <input type="number" id="sN" min="3" max="200"></label>
   <label>Dollars per pump <input type="number" id="sV" min="1" max="1000"></label>
-  <label>Balloons in Round 1 <input type="number" id="sB1" min="1" max="100"></label>
-  <label>Balloons in Round 2 <input type="number" id="sB2" min="1" max="200"></label>
+  <label>Balloons per round <input type="number" id="sB" min="1" max="200"></label>
   <label>Show pop chance before each pump <input type="checkbox" id="sOdds"></label>
   <label>Reveal where a collected balloon would have popped <input type="checkbox" id="sReveal"></label>
-  <label>Round 2 starts with the same balloons as Round 1 <input type="checkbox" id="sReuse"></label>
-  <label>Offer auto-pump in Round 2 <input type="checkbox" id="sAuto"></label>
+  <label>Every round uses the same balloons <input type="checkbox" id="sReuse"></label>
+  <label>Offer auto-pump after Round 1 <input type="checkbox" id="sAuto"></label>
   <label>Random seed (same seed = same balloons) <input type="number" id="sSeed"></label>
   <div class="row" style="justify-content:flex-end">
     <button id="sCancel">Cancel</button>
@@ -153,39 +162,48 @@
    Before pump number k+1 (i.e. after k successful pumps) the balloon pops with chance 1/(N-k).
    That is exactly equivalent to choosing the balloon's "pop point" uniformly from {1,...,N}
    in advance: P(survive n pumps) = (N-1)/N * (N-2)/(N-1) * ... = (N-n)/N.
-   Pre-drawing pop points from a seeded generator lets Round 2 replay Round 1's balloons and
+   Pre-drawing pop points from a seeded generator lets every round replay the same balloons and
    lets us compute what any strategy would have earned on the exact same balloons.
-   Expected value of pumping n times: E(n) = v*n*(N-n)/N, maximized at n = N/2.            */
+   Expected value of pumping n times: E(n) = v*n*(N-n)/N, maximized at n = N/2.
+
+   Defaults (N = 6, 15 balloons per round) were chosen by simulation: a round takes about as
+   long as 10 balloons with N = 10, but on the same balloons the optimal strategy (3 pumps)
+   beats stopping one pump early or late noticeably more often.                              */
 
 const $ = id => document.getElementById(id);
-const S = {N:10, v:10, B1:10, B2:10, showOdds:true, reveal:true, reuse:true, auto2:true,
+const S = {N:6, v:10, B:15, showOdds:true, reveal:true, reuse:true, auto:true,
            seed: Math.floor(Math.random()*1e6)};
 (function readURL(){
   const p = new URLSearchParams(location.search);
   const num = (k, lo, hi) => { const x = parseInt(p.get(k)); return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : null; };
   const bool = k => p.has(k) ? !['0','false','no','off'].includes(p.get(k).toLowerCase()) : null;
   const set = (key, val) => { if (val !== null) S[key] = val; };
-  set('N', num('N',3,200)); set('v', num('v',1,1000)); set('B1', num('b1',1,100)); set('B2', num('b2',1,200));
+  set('N', num('N',3,200)); set('v', num('v',1,1000)); set('B', num('b',1,200));
   set('seed', num('seed',0,1e9)); set('showOdds', bool('odds')); set('reveal', bool('reveal'));
-  set('reuse', bool('reuse')); set('auto2', bool('auto'));
+  set('reuse', bool('reuse')); set('auto', bool('auto'));
 })();
 
 const COLORS = ['#e63946','#2f6fde','#f4a261','#2a9d8f','#9b5de5','#f15bb5','#00a6d6','#ff7f11'];
-let seq = [], round = 1, idx = 0, pumps = 0, phase = 'play', lockUntil = 0, autoTimer = null;
-let results = {1: [], 2: []}, showAnalysis = false;
+const ROUND_COLORS = ['#e08a00','#1f9d55','#9b5de5','#2f6fde','#d64545','#00a6d6','#7a5c2e','#f15bb5'];
+const roundColor = r => ROUND_COLORS[(r - 1) % ROUND_COLORS.length];
+
+let rng, seq = [], round = 1, idx = 0, pumps = 0, phase = 'play', lockUntil = 0, autoTimer = null;
+let rounds = [[]];            // rounds[r-1] = list of balloon results for round r (kept until Reset)
+let showAnalysis = false;
 
 function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
   t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function makeSeq(){ const r = mulberry32(S.seed); seq = Array.from({length: S.B1 + S.B2}, () => 1 + Math.floor(r() * S.N)); }
+function seqAt(i){ while (seq.length <= i) seq.push(1 + Math.floor(rng() * S.N)); return seq[i]; }
 
-const nB = () => round === 1 ? S.B1 : S.B2;
-const offset = r => (r === 2 && !S.reuse) ? S.B1 : 0;
-const popAt = () => seq[offset(round) + idx];
+const offset = r => S.reuse ? 0 : (r - 1) * S.B;
+const popAt = () => seqAt(offset(round) + idx);
+const res = r => rounds[r - 1] || [];
 const money = x => '$' + Math.round(x).toLocaleString();
 const money2 = x => '$' + x.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const nOpt = () => Math.floor(S.N / 2);
 const E = n => S.v * n * (S.N - n) / S.N;
-const total = r => results[r].reduce((s, b) => s + b.earned, 0);
+const total = r => res(r).reduce((s, b) => s + b.earned, 0);
+const completedRounds = () => rounds.filter(x => x.length === S.B).length;
 
 /* ---------- Game actions ---------- */
 function pump(){
@@ -199,7 +217,7 @@ function collect(){
 }
 function finish(popped){
   stopAuto();
-  results[round].push({pumps, popped, earned: popped ? 0 : S.v * pumps, popAt: popAt()});
+  res(round).push({pumps, popped, earned: popped ? 0 : S.v * pumps, popAt: popAt()});
   phase = 'outcome';
   lockUntil = Date.now() + 700;
   setTimeout(render, 720);
@@ -222,7 +240,7 @@ function primary(){
   else if (phase === 'outcome' && Date.now() >= lockUntil) next();
 }
 function next(){
-  if (idx < nB() - 1){ idx++; newBalloon(); }
+  if (idx < S.B - 1){ idx++; newBalloon(); }
   else { phase = 'done'; showAnalysis = false; renderSummary(); }
   render();
 }
@@ -243,22 +261,22 @@ function startAuto(){
     if (phase !== 'play'){ stopAuto(); return; }
     pump();
     if (phase === 'play' && pumps >= target) collect();
-  }, 110);
+  }, 130);
   render();
 }
 function stopAuto(){ if (autoTimer){ clearInterval(autoTimer); autoTimer = null; } }
 
 function resetAll(){
-  stopAuto(); makeSeq();
-  round = 1; idx = 0; results = {1: [], 2: []}; showAnalysis = false;
+  stopAuto();
+  rng = mulberry32(S.seed); seq = [];
+  round = 1; idx = 0; rounds = [[]]; showAnalysis = false;
   $('summary').hidden = true;
   $('autoN').value = nOpt();
   newBalloon(); render();
 }
-function startRound2(){
-  round = 2; idx = 0; results[2] = []; showAnalysis = false;
+function startNextRound(){
+  round++; idx = 0; rounds[round - 1] = []; showAnalysis = false;
   $('summary').hidden = true;
-  $('autoN').value = nOpt();
   newBalloon(); render();
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -267,13 +285,12 @@ function startRound2(){
 function render(){
   $('roundPill').textContent = `Round ${round}`;
   $('bank').textContent = money(total(round));
-  $('balNum').textContent = `${Math.min(idx + 1, nB())} / ${nB()}`;
+  $('balNum').textContent = `${Math.min(idx + 1, S.B)} / ${S.B}`;
   $('pumpCount').textContent = pumps;
   const live = phase === 'play';
-  $('current').textContent = money(live ? S.v * pumps : (results[round].at(-1)?.earned ?? 0));
+  $('current').textContent = money(live ? S.v * pumps : (res(round).at(-1)?.earned ?? 0));
 
-  // balloon size grows with pumps
-  const s = 0.32 + 0.68 * Math.min(pumps, S.N) / S.N;
+  const s = 0.32 + 0.68 * Math.min(pumps, S.N) / S.N;     // balloon grows with pumps
   $('balloon').style.transform = `scale(${s})`;
 
   if (live && S.showOdds){
@@ -284,37 +301,45 @@ function render(){
   const pb = $('primaryBtn'), cb = $('collectBtn');
   if (live){ pb.textContent = 'Pump'; pb.disabled = !!autoTimer; }
   else if (phase === 'outcome'){
-    pb.textContent = idx < nB() - 1 ? 'Next balloon →' : 'See results';
+    pb.textContent = idx < S.B - 1 ? 'Next balloon →' : 'See results';
     pb.disabled = Date.now() < lockUntil;
   } else { pb.textContent = 'Round over'; pb.disabled = true; }
   cb.textContent = live ? `Collect ${money(S.v * pumps)}` : 'Collect $';
   cb.disabled = !live || !!autoTimer;
 
-  $('auto').hidden = !(round === 2 && S.auto2);
+  $('auto').hidden = !(round >= 2 && S.auto);
   $('autoGo').disabled = !live || !!autoTimer;
 
-  // progress dots + history
+  // current round: progress dots + balloon-by-balloon table
   $('histTitle').textContent = `Round ${round} balloons`;
-  const res = results[round];
-  $('dots').innerHTML = Array.from({length: nB()}, (_, i) => {
-    const b = res[i];
+  const cur = res(round);
+  $('dots').innerHTML = Array.from({length: S.B}, (_, i) => {
+    const b = cur[i];
     const cls = b ? (b.popped ? 'pop' : 'cash') : (i === idx && phase !== 'done' ? 'cur' : '');
     return `<div class="dot ${cls}" title="Balloon ${i + 1}"></div>`;
   }).join('');
   $('popCol').style.display = S.reveal ? '' : 'none';
-  $('hist').innerHTML = res.map((b, i) => `<tr>
+  $('hist').innerHTML = cur.map((b, i) => `<tr>
       <td>${i + 1}</td><td>${b.pumps}</td>
       <td class="${b.popped ? 'pop' : 'cash'}">${b.popped ? 'Popped' : 'Collected'}</td>
       <td>${money(b.earned)}</td>
       <td style="${S.reveal ? '' : 'display:none'}">${b.popAt}</td></tr>`).join('')
     || `<tr><td colspan="5" style="text-align:center;color:var(--muted)">No balloons yet</td></tr>`;
+
+  // every round played since the last Reset
+  $('allWrap').hidden = round === 1 && phase !== 'done';
+  $('allRounds').innerHTML = rounds.map((r, i) => {
+    const n = i + 1, st = roundStats(n), inProgress = r.length < S.B;
+    return `<tr class="${n === round ? 'curRow' : ''}">
+      <td><span class="swatch" style="background:${roundColor(n)}"></span>${n}${inProgress ? ' <small style="color:var(--muted)">(playing)</small>' : ''}</td>
+      <td>${st.B - st.pops} / ${st.B}</td><td>${money(st.t)}</td><td>${money2(st.avg)}</td></tr>`;
+  }).join('');
 }
 
 function roundStats(r){
-  const res = results[r], B = res.length, t = total(r);
-  const k = nOpt();
-  const optSame = res.reduce((s, b) => s + (b.popAt > k ? S.v * k : 0), 0);
-  return {B, t, avg: B ? t / B : 0, pops: res.filter(b => b.popped).length,
+  const list = res(r), B = list.length, t = total(r), k = nOpt();
+  const optSame = list.reduce((s, b) => s + (b.popAt > k ? S.v * k : 0), 0);
+  return {B, t, avg: B ? t / B : 0, pops: list.filter(b => b.popped).length,
           optSame, optSameAvg: B ? optSame / B : 0};
 }
 
@@ -328,25 +353,16 @@ function renderSummary(){
       <div><div class="v">${st.B - st.pops} / ${st.B}</div><div class="k">balloons collected</div></div>
       <div><div class="v">${st.pops}</div><div class="k">balloons popped</div></div>
     </div>`;
-
-  if (round === 2 && results[1].length){
-    const s1 = roundStats(1);
-    html += `<table style="max-width:640px;margin-bottom:10px">
-      <thead><tr><th>Round</th><th>Balloons</th><th>Total</th><th>Avg / balloon</th></tr></thead>
-      <tbody>
-        <tr><td>Round 1</td><td>${s1.B}</td><td>${money(s1.t)}</td><td>${money2(s1.avg)}</td></tr>
-        <tr><td>Round 2</td><td>${st.B}</td><td>${money(st.t)}</td><td>${money2(st.avg)}</td></tr>
-      </tbody></table>`;
-    if (S.reuse) html += `<p class="hint" style="text-align:left">${S.B2 <= S.B1 ? (S.B2 === S.B1 ? 'Both rounds used exactly the same balloons, so the difference is due to strategy, not luck.' : `Round 2 replayed the first ${S.B2} balloons of Round 1.`) : `Round 2's first ${S.B1} balloons were the same balloons as Round 1.`}</p>`;
-  }
-
+  if (round >= 2) html += `<p class="hint" style="text-align:left">${S.reuse
+      ? 'Every round used exactly the same balloons, so differences between rounds come from strategy, not luck.'
+      : 'Each round used new balloons.'} Compare all rounds in the table on the right.</p>`;
   html += `<div class="row">
-      ${round === 1 ? `<button class="big primary" id="r2Btn" style="font-size:20px;padding:12px 22px">Start Round 2 (${S.B2} balloons)</button>` : ''}
+      <button class="big primary" id="nextRoundBtn" style="font-size:20px;padding:12px 22px">Start Round ${round + 1}</button>
       <button id="anaBtn" style="font-size:18px">${showAnalysis ? 'Hide' : 'Show'} analysis</button>
     </div>
     <div id="analysis" ${showAnalysis ? '' : 'hidden'}>${analysisHTML()}</div>`;
   el.innerHTML = html;
-  if ($('r2Btn')) $('r2Btn').onclick = startRound2;
+  $('nextRoundBtn').onclick = startNextRound;
   $('anaBtn').onclick = () => { showAnalysis = !showAnalysis; renderSummary(); };
 }
 
@@ -354,23 +370,26 @@ function analysisHTML(){
   const k = nOpt();
   let h = `<p>Expected value of pumping <i>n</i> times:
       <b>E(n) = ${S.v}·n·(${S.N} − n)/${S.N}</b>, maximized at <b>n = ${k}</b>,
-      for an expected <b>${money2(E(k))}</b> per balloon.</p>`;
-  for (const r of [1, 2]){
-    if (!results[r].length) continue;
-    const st = roundStats(r);
-    h += `<p><b>Round ${r}:</b> you earned ${money(st.t)} (${money2(st.avg)} per balloon).
-      Pumping exactly ${k} times on <i>these same ${st.B} balloons</i> would have earned
-      <b>${money(st.optSame)}</b> (${money2(st.optSameAvg)} per balloon).</p>`;
-  }
-  h += `<div class="chartwrap">${chartSVG()}</div>
-        <p class="hint" style="text-align:left">Dots: E(n) for each n. Markers: where balloons were collected
-        (<span style="color:var(--r1)">■ Round 1</span>, <span style="color:var(--r2)">▲ Round 2</span>).</p>`;
+      for an expected <b>${money2(E(k))}</b> per balloon.</p>
+    <table style="max-width:680px;margin:10px 0">
+      <thead><tr><th>Round</th><th>You earned</th><th>Pumping ${k} every time, same balloons</th></tr></thead><tbody>`;
+  rounds.forEach((r, i) => {
+    if (r.length < S.B) return;
+    const st = roundStats(i + 1);
+    h += `<tr><td><span class="swatch" style="background:${roundColor(i + 1)}"></span>${i + 1}</td>
+      <td>${money(st.t)} (${money2(st.avg)} each)</td><td>${money(st.optSame)} (${money2(st.optSameAvg)} each)</td></tr>`;
+  });
+  h += `</tbody></table>
+    <div class="chartwrap">${chartSVG()}</div>
+    <p class="hint" style="text-align:left">Blue dots: E(n) for each n. Colored squares: where balloons were collected, one color per round (matching the table).</p>`;
   return h;
 }
 
 function chartSVG(){
   const W = 620, H = 320, L = 56, R = 16, T = 16, Bm = 44;
-  const ymax = E(nOpt()) * 1.15 || 1;
+  const raw = (E(nOpt()) * 1.2 || 1) / 4, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+  const ymax = 4 * step;   // "nice" axis: 4 gridlines at round dollar amounts
   const x = n => L + (W - L - R) * n / S.N;
   const y = v => T + (H - T - Bm) * (1 - v / ymax);
   let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Expected value chart" font-size="13" fill="#6b6b72">`;
@@ -382,34 +401,36 @@ function chartSVG(){
     g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#eee"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${money(v)}</text>`;
   }
   g += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">number of pumps n</text>`;
-  for (let n = 0; n <= S.N; n++) g += `<circle cx="${x(n)}" cy="${y(E(n))}" r="3.5" fill="#2f6fde"/>`;
   const k = nOpt();
   g += `<line x1="${x(k)}" x2="${x(k)}" y1="${y(E(k))}" y2="${y(0)}" stroke="#2f6fde" stroke-dasharray="4 4"/>`;
-  const stack = {};
-  for (const r of [1, 2]) for (const b of results[r]){
-    if (b.popped) continue;
-    const key = b.pumps; stack[key] = (stack[key] || 0) + 1;
-    const cx = x(b.pumps), cy = y(E(b.pumps)) - 10 * stack[key];
-    g += r === 1
-      ? `<rect x="${cx - 5}" y="${cy - 5}" width="10" height="10" fill="#e08a00" opacity=".85"/>`
-      : `<polygon points="${cx},${cy - 6} ${cx + 6},${cy + 5} ${cx - 6},${cy + 5}" fill="#1f9d55" opacity=".85"/>`;
-  }
+  // collected balloons: stacked squares above the curve, spread sideways by round
+  const nR = rounds.length, stack = {};
+  rounds.forEach((list, i) => {
+    const dx = (i - (nR - 1) / 2) * Math.min(9, 40 / Math.max(nR, 1));
+    for (const b of list){
+      if (b.popped) continue;
+      const key = i + ':' + b.pumps; stack[key] = (stack[key] || 0) + 1;
+      const cx = x(b.pumps) + dx, cy = y(E(b.pumps)) - 8 - 8 * stack[key];
+      g += `<rect x="${cx - 3.5}" y="${cy - 3.5}" width="7" height="7" fill="${roundColor(i + 1)}" opacity=".9"/>`;
+    }
+  });
+  for (let n = 0; n <= S.N; n++) g += `<circle cx="${x(n)}" cy="${y(E(n))}" r="4.5" fill="#2f6fde"/>`;
   return g + `</svg>`;
 }
 
 /* ---------- Settings ---------- */
 function openSettings(){
-  $('sN').value = S.N; $('sV').value = S.v; $('sB1').value = S.B1; $('sB2').value = S.B2;
+  $('sN').value = S.N; $('sV').value = S.v; $('sB').value = S.B;
   $('sOdds').checked = S.showOdds; $('sReveal').checked = S.reveal; $('sReuse').checked = S.reuse;
-  $('sAuto').checked = S.auto2; $('sSeed').value = S.seed;
+  $('sAuto').checked = S.auto; $('sSeed').value = S.seed;
   $('settings').showModal();
 }
 function applySettings(){
   const clamp = (v, lo, hi, d) => { v = parseInt(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
-  S.N = clamp($('sN').value, 3, 200, 10); S.v = clamp($('sV').value, 1, 1000, 10);
-  S.B1 = clamp($('sB1').value, 1, 100, 10); S.B2 = clamp($('sB2').value, 1, 200, 10);
+  S.N = clamp($('sN').value, 3, 200, 6); S.v = clamp($('sV').value, 1, 1000, 10);
+  S.B = clamp($('sB').value, 1, 200, 15);
   S.showOdds = $('sOdds').checked; S.reveal = $('sReveal').checked; S.reuse = $('sReuse').checked;
-  S.auto2 = $('sAuto').checked; S.seed = clamp($('sSeed').value, 0, 1e9, S.seed);
+  S.auto = $('sAuto').checked; S.seed = clamp($('sSeed').value, 0, 1e9, S.seed);
   $('settings').close(); resetAll();
 }
 
@@ -417,7 +438,9 @@ function applySettings(){
 $('primaryBtn').onclick = primary;
 $('collectBtn').onclick = collect;
 $('autoGo').onclick = startAuto;
-$('resetBtn').onclick = () => { if (confirm('Start over from Round 1 with new balloons?')){ S.seed = Math.floor(Math.random() * 1e6); resetAll(); } };
+$('resetBtn').onclick = () => {
+  if (confirm('Erase all rounds and start over with new balloons?')){ S.seed = Math.floor(Math.random() * 1e6); resetAll(); }
+};
 $('settingsBtn').onclick = openSettings;
 $('sCancel').onclick = () => $('settings').close();
 $('sApply').onclick = applySettings;
