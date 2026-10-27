@@ -10,6 +10,8 @@ A single-file web app (`index.html`) for the optimization unit of MA 130 (Revisi
 
 Keyboard: Space = pump / next balloon, Enter = collect.
 
+Created with Claude.
+
 ## Settings
 Use the Settings button or URL parameters, for example:
 `index.html?N=10&v=10&b1=10&b2=10&seed=1234`
@@ -25,5 +27,4 @@ Use the Settings button or URL parameters, for example:
 | `reuse` | 0 or 1: Round 2 starts with Round 1's balloons |
 | `auto` | 0 or 1: offer auto-pump in Round 2 |
 
-## Hosting on GitHub Pages
-Put `index.html` in a repository, then go to **Settings → Pages → Deploy from branch** (main, root). The app will be at `https://<user>.github.io/<repo>/`.
+
